@@ -1,0 +1,791 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>FoodFlow — System Design Document</title>
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <!-- FontAwesome Icons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  
+  <style>
+    :root {
+      --bg-base: #0a0a0c;
+      --bg-surface: #121216;
+      --bg-surface-elevated: #1a1a22;
+      --primary: #00e08f;
+      --primary-glow: rgba(0, 224, 143, 0.15);
+      --secondary: #ffb800;
+      --secondary-glow: rgba(255, 184, 0, 0.15);
+      --danger: #ff4a5a;
+      --text-main: #f3f3f6;
+      --text-muted: #8e8e9f;
+      --border-color: rgba(255, 255, 255, 0.08);
+      --font-sans: 'Outfit', sans-serif;
+      --font-mono: 'JetBrains Mono', monospace;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      scroll-behavior: smooth;
+    }
+
+    body {
+      background-color: var(--bg-base);
+      color: var(--text-main);
+      font-family: var(--font-sans);
+      line-height: 1.6;
+      display: flex;
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+
+    /* Custom Scrollbar */
+    ::-webkit-scrollbar {
+      width: 8px;
+      height: 8px;
+    }
+    ::-webkit-scrollbar-track {
+      background: var(--bg-base);
+    }
+    ::-webkit-scrollbar-thumb {
+      background: var(--border-color);
+      border-radius: 4px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: var(--primary);
+    }
+
+    /* Sidebar Navigation */
+    aside {
+      width: 280px;
+      background-color: var(--bg-surface);
+      border-right: 1px solid var(--border-color);
+      padding: 2rem 1.5rem;
+      position: fixed;
+      top: 0;
+      bottom: 0;
+      left: 0;
+      z-index: 100;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 2rem;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      font-size: 1.5rem;
+      font-weight: 800;
+      color: var(--text-main);
+    }
+
+    .brand i {
+      color: var(--primary);
+      text-shadow: 0 0 10px var(--primary-glow);
+    }
+
+    .nav-list {
+      list-style: none;
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+    }
+
+    .nav-item a {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      color: var(--text-muted);
+      text-decoration: none;
+      padding: 0.75rem 1rem;
+      border-radius: 8px;
+      font-weight: 500;
+      font-size: 0.95rem;
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    .nav-item a:hover,
+    .nav-item.active a {
+      color: var(--primary);
+      background-color: var(--primary-glow);
+      padding-left: 1.25rem;
+    }
+
+    /* Main Content Area */
+    main {
+      margin-left: 280px;
+      padding: 3rem 4rem;
+      max-width: 1200px;
+      width: calc(100% - 280px);
+    }
+
+    /* Typography */
+    h1 {
+      font-size: 2.75rem;
+      font-weight: 800;
+      margin-bottom: 2rem;
+      background: linear-gradient(135deg, #ffffff 0%, #a0a0a5 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      border-bottom: 1px solid var(--border-color);
+      padding-bottom: 1.5rem;
+    }
+
+    h2 {
+      font-size: 1.85rem;
+      font-weight: 700;
+      color: var(--primary);
+      margin-top: 3.5rem;
+      margin-bottom: 1.5rem;
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+    }
+
+    h3 {
+      font-size: 1.3rem;
+      font-weight: 600;
+      color: var(--text-main);
+      margin-top: 2rem;
+      margin-bottom: 1rem;
+    }
+
+    p {
+      color: var(--text-muted);
+      font-size: 1.05rem;
+      margin-bottom: 1.5rem;
+      text-align: justify;
+    }
+
+    ul, ol {
+      margin-left: 1.5rem;
+      margin-bottom: 1.5rem;
+      color: var(--text-muted);
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+    }
+
+    li strong {
+      color: var(--text-main);
+    }
+
+    /* Custom Elements */
+    .highlight-card {
+      background-color: var(--bg-surface);
+      border: 1px solid var(--border-color);
+      border-radius: 12px;
+      padding: 1.5rem;
+      margin-bottom: 1.5rem;
+      position: relative;
+      overflow: hidden;
+      transition: border-color 0.3s ease;
+    }
+
+    .highlight-card:hover {
+      border-color: rgba(0, 224, 143, 0.3);
+    }
+
+    .highlight-card::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 4px;
+      height: 100%;
+      background-color: var(--primary);
+    }
+
+    .schema-card {
+      background-color: var(--bg-surface);
+      border: 1px solid var(--border-color);
+      border-radius: 12px;
+      margin-bottom: 1.5rem;
+      overflow: hidden;
+    }
+
+    .schema-header {
+      background-color: rgba(255, 255, 255, 0.02);
+      border-bottom: 1px solid var(--border-color);
+      padding: 1rem 1.5rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .schema-title {
+      font-weight: 600;
+      color: var(--primary);
+      font-family: var(--font-mono);
+      font-size: 1.1rem;
+    }
+
+    .schema-badge {
+      font-size: 0.75rem;
+      font-weight: 700;
+      padding: 0.25rem 0.5rem;
+      background-color: rgba(0, 224, 143, 0.1);
+      color: var(--primary);
+      border-radius: 4px;
+      border: 1px solid rgba(0, 224, 143, 0.2);
+    }
+
+    /* Tables */
+    .table-container {
+      width: 100%;
+      overflow-x: auto;
+      border: 1px solid var(--border-color);
+      border-radius: 12px;
+      margin: 1.5rem 0;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      text-align: left;
+    }
+
+    th {
+      background-color: var(--bg-surface);
+      color: var(--text-main);
+      font-weight: 600;
+      font-size: 0.95rem;
+      padding: 1rem 1.25rem;
+      border-bottom: 1px solid var(--border-color);
+    }
+
+    td {
+      padding: 1rem 1.25rem;
+      border-bottom: 1px solid var(--border-color);
+      color: var(--text-muted);
+      font-size: 0.95rem;
+      vertical-align: middle;
+    }
+
+    tr:last-child td {
+      border-bottom: none;
+    }
+
+    tr:hover td {
+      color: var(--text-main);
+      background-color: rgba(255, 255, 255, 0.01);
+    }
+
+    .method-badge {
+      font-family: var(--font-mono);
+      font-weight: 700;
+      font-size: 0.75rem;
+      padding: 0.25rem 0.5rem;
+      border-radius: 4px;
+      text-transform: uppercase;
+      display: inline-block;
+    }
+
+    .method-badge.get {
+      background-color: rgba(0, 224, 143, 0.1);
+      color: var(--primary);
+      border: 1px solid rgba(0, 224, 143, 0.2);
+    }
+
+    .method-badge.post {
+      background-color: rgba(255, 184, 0, 0.1);
+      color: var(--secondary);
+      border: 1px solid rgba(255, 184, 0, 0.2);
+    }
+
+    .method-badge.put {
+      background-color: rgba(58, 140, 255, 0.1);
+      color: #3a8cff;
+      border: 1px solid rgba(58, 140, 255, 0.2);
+    }
+
+    .method-badge.delete {
+      background-color: rgba(255, 74, 90, 0.1);
+      color: var(--danger);
+      border: 1px solid rgba(255, 74, 90, 0.2);
+    }
+
+    /* Code Blocks */
+    pre {
+      background-color: rgba(0, 0, 0, 0.2);
+      padding: 1.5rem;
+      overflow-x: auto;
+      font-family: var(--font-mono);
+      font-size: 0.9rem;
+      color: #a9b7c6;
+    }
+
+    code {
+      font-family: var(--font-mono);
+      color: var(--primary);
+      background-color: rgba(0, 224, 143, 0.05);
+      padding: 0.15rem 0.4rem;
+      border-radius: 4px;
+      font-size: 0.9rem;
+    }
+
+    /* Security Cards */
+    .security-box {
+      border-radius: 12px;
+      padding: 1.5rem;
+      margin-bottom: 1.5rem;
+      border: 1px solid var(--border-color);
+      display: flex;
+      gap: 1.25rem;
+    }
+
+    .security-box i {
+      font-size: 1.75rem;
+      margin-top: 0.25rem;
+    }
+
+    .security-box.defense {
+      background-color: rgba(0, 224, 143, 0.02);
+      border-left: 4px solid var(--primary);
+    }
+
+    .security-box.defense i {
+      color: var(--primary);
+    }
+
+    .security-box.weakness {
+      background-color: rgba(255, 184, 0, 0.02);
+      border-left: 4px solid var(--secondary);
+    }
+
+    .security-box.weakness i {
+      color: var(--secondary);
+    }
+
+    .security-content h4 {
+      font-size: 1.15rem;
+      font-weight: 600;
+      color: var(--text-main);
+      margin-bottom: 0.5rem;
+    }
+
+    /* Responsive Design */
+    @media (max-width: 992px) {
+      aside {
+        display: none;
+      }
+      main {
+        margin-left: 0;
+        width: 100%;
+        padding: 2rem;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Sidebar Navigation -->
+  <aside>
+    <div class="brand">
+      <i class="fa-solid fa-burger"></i>
+      <span>FoodFlow SDD</span>
+    </div>
+    <ul class="nav-list">
+      <li class="nav-item"><a href="#executive-summary"><i class="fa-solid fa-file-invoice"></i> Executive Summary</a></li>
+      <li class="nav-item"><a href="#functional-scope"><i class="fa-solid fa-gears"></i> Functional Scope</a></li>
+      <li class="nav-item"><a href="#project-structure"><i class="fa-solid fa-folder-tree"></i> Project Structure</a></li>
+      <li class="nav-item"><a href="#api-design"><i class="fa-solid fa-circle-nodes"></i> API Design</a></li>
+      <li class="nav-item"><a href="#database-design"><i class="fa-solid fa-database"></i> Database Design</a></li>
+      <li class="nav-item"><a href="#order-lifecycle"><i class="fa-solid fa-rotate"></i> Order Lifecycle</a></li>
+      <li class="nav-item"><a href="#security-implementation"><i class="fa-solid fa-shield-halved"></i> Security & Threat</a></li>
+      <li class="nav-item"><a href="#future-enhancements"><i class="fa-solid fa-rocket"></i> Future Actions</a></li>
+    </ul>
+  </aside>
+
+  <!-- Main Content Area -->
+  <main>
+    <!-- Header -->
+    <header style="margin-bottom: 3.5rem;">
+      <h1 style="border-bottom: none; margin-bottom: 0.5rem; padding-bottom: 0;">FoodFlow: Enterprise Delivery Platform</h1>
+      <p style="font-size: 1.2rem; color: var(--text-muted); font-weight: 400; margin-bottom: 0;">Full-Stack System Design Document & Operational Specification</p>
+    </header>
+
+    <!-- SECTION 1 -->
+    <section id="executive-summary">
+      <h2><i class="fa-solid fa-file-invoice"></i> 1. Executive Summary & Problem Statement</h2>
+      <div class="highlight-card">
+        <p style="margin-bottom: 0; font-weight: 500; color: var(--text-main);">
+          FoodFlow solves modern food delivery friction by providing a highly synchronized, multi-portal application built on stateless rest interfaces. The architecture bridges the real-time operational gap between Customers, Restaurants, Riders, and Admins.
+        </p>
+      </div>
+      <p>
+        Traditional food platforms experience high latency and severe coordination overhead caused by siloed operational frameworks. Customers suffer from static, un-reactive delivery trackers, restaurants struggle with complex manual rider dispatch coordination, and riders lack micro-incentives like dynamic wallet ledgers that track real-time delivery counts and earnings.
+      </p>
+      <p>
+        <strong>FoodFlow addresses these limits by establishing a clean, unified platform:</strong>
+      </p>
+      <ul>
+        <li><strong>Unified Cryptographic Identities:</strong> Single-sign-on layout where user authentication claims are decoded to securely direct users to their dedicated portals.</li>
+        <li><strong>Real-time Polling Engine:</strong> Dashboards and active tracking templates trigger asynchronous checks (every 5 seconds) to cycle order status, update dispatch queues, and trigger alerts without page reloads.</li>
+        <li><strong>Low Overhead State Lifecycle:</strong> Strict state transition sequences powered by stateless JSON Web Token (JWT) assertions.</li>
+      </ul>
+    </section>
+
+    <!-- SECTION 2 -->
+    <section id="functional-scope">
+      <h2><i class="fa-solid fa-gears"></i> 2. Functional Scope & Portals</h2>
+      
+      <h3>2.1. Customer Portal Workspace</h3>
+      <p>
+        Customers access a premium, dark-themed responsive discovery panel. Features include restaurant filtering by active municipal boundaries, interactive cart checkouts featuring auto-calculated grand totals (adding a fixed Rs. 150 delivery fee), a persistent graphical order-status bar, and a star feedback system.
+      </p>
+
+      <h3>2.2. Restaurant Kitchen Dashboard</h3>
+      <p>
+        Kitchen operators can configure restaurant details, manage menu items within food categories, and process incoming orders. When an order arrives, a prominent visual alert appears. Ready orders can be dispatched by selecting from a list of active online riders.
+      </p>
+
+      <h3>2.3. Rider Fleet Ledger</h3>
+      <p>
+        Riders operate a dashboard featuring a toggle to control their online availability. When set to online, riders become eligible for manual restaurant dispatch. Delivering an order increments the rider's successful order count and credits Rs. 150 to their earnings wallet.
+      </p>
+
+      <h3>2.4. Central System Governance</h3>
+      <p>
+        Root Administrators monitor real-time system metrics (users, active stores, order count, and gross system revenue). Admins verify and approve new restaurants, define system cities, and manage operational categories.
+      </p>
+    </section>
+
+    <!-- SECTION 3 -->
+    <section id="project-structure">
+      <h2><i class="fa-solid fa-folder-tree"></i> 3. Project Directory Architecture</h2>
+      <p>
+        The codebase utilizes a separated Client-Server layout. The backend is configured as a modular Node.js/Express API, while the frontend is an Angular 17 SPA (Single Page Application).
+      </p>
+      <pre>
+food-delivery-system/
+├── server/                               # Node.js/Express backend
+│   ├── middleware/
+│   │   └── auth.js                       # JWT decryption & role enrichment
+│   ├── models/
+│   │   ├── Category.js                   # Food categories
+│   │   ├── City.js                       # Active operational cities
+│   │   ├── MenuItem.js                   # Menu items linked to restaurants
+│   │   ├── Order.js                      # Transactional order data with embedded reviews
+│   │   ├── Restaurant.js                 # Restaurant metadata & review averages
+│   │   ├── RiderProfile.js               # Online statuses, wallets, & order stats
+│   │   └── User.js                       # User credentials and active roles
+│   ├── routes/
+│   │   ├── admin.js                      # Admin analytics & taxonomy CRUD
+│   │   ├── auth.js                       # Registration, hashing & tokens
+│   │   ├── customer.js                   # Checkout, status, & review operations
+│   │   ├── restaurant.js                 # Catalog, profile & manual dispatching
+│   │   └── rider.js                      # Online status & wallet increments
+│   └── server.js                         # Core express settings
+│
+└── client/                               # Angular 17 SPA client
+    ├── src/app/components/
+    │   ├── admin/                        # Admin statistics & management panels
+    │   ├── customer/                     # Dark-mode ordering & tracking panels
+    │   ├── restaurant/                   # Kitchen CRUD & manual dispatching UI
+    │   └── rider/                        # Online availability & delivery logs
+    └── angular.json                      # Style configurations & compilation budgets
+      </pre>
+    </section>
+
+    <!-- SECTION 4 -->
+    <section id="api-design">
+      <h2><i class="fa-solid fa-circle-nodes"></i> 4. API Endpoint Specification</h2>
+      <p>
+        The table below defines the core API routes, access privileges, and operations across the platform:
+      </p>
+      <div class="table-container">
+        <table>
+          <thead>
+            <tr>
+              <th>Domain</th>
+              <th>Method</th>
+              <th>Endpoint Path</th>
+              <th>Access Role</th>
+              <th>Operational Action</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><strong>Authentication</strong></td>
+              <td><span class="method-badge post">POST</span></td>
+              <td><code>/api/auth/register</code></td>
+              <td>Public</td>
+              <td>Create new credentials and set system role</td>
+            </tr>
+            <tr>
+              <td><strong>Authentication</strong></td>
+              <td><span class="method-badge post">POST</span></td>
+              <td><code>/api/auth/login</code></td>
+              <td>Public</td>
+              <td>Validate credentials and generate JWT</td>
+            </tr>
+            <tr>
+              <td><strong>Customer</strong></td>
+              <td><span class="method-badge get">GET</span></td>
+              <td><code>/api/customer/restaurants</code></td>
+              <td>Customer</td>
+              <td>List active approved stores in customer's city</td>
+            </tr>
+            <tr>
+              <td><strong>Customer</strong></td>
+              <td><span class="method-badge post">POST</span></td>
+              <td><code>/api/customer/order</code></td>
+              <td>Customer</td>
+              <td>Submit card checkout/COD request</td>
+            </tr>
+            <tr>
+              <td><strong>Customer</strong></td>
+              <td><span class="method-badge post">POST</span></td>
+              <td><code>/api/customer/order/:id/review</code></td>
+              <td>Customer</td>
+              <td>Add star ratings and recalculate restaurant average</td>
+            </tr>
+            <tr>
+              <td><strong>Restaurant</strong></td>
+              <td><span class="method-badge post">POST</span></td>
+              <td><code>/api/restaurant/menu</code></td>
+              <td>Restaurant</td>
+              <td>Create new menu entry within catalog category</td>
+            </tr>
+            <tr>
+              <td><strong>Restaurant</strong></td>
+              <td><span class="method-badge put">PUT</span></td>
+              <td><code>/api/restaurant/order/:id/dispatch</code></td>
+              <td>Restaurant</td>
+              <td>Assign an active online rider to standard delivery</td>
+            </tr>
+            <tr>
+              <td><strong>Rider</strong></td>
+              <td><span class="method-badge put">PUT</span></td>
+              <td><code>/api/rider/status</code></td>
+              <td>Rider</td>
+              <td>Toggle online status for delivery dispatch</td>
+            </tr>
+            <tr>
+              <td><strong>Rider</strong></td>
+              <td><span class="method-badge put">PUT</span></td>
+              <td><code>/api/rider/order/:id/status</code></td>
+              <td>Rider</td>
+              <td>Complete delivery and trigger wallet payout</td>
+            </tr>
+            <tr>
+              <td><strong>Admin</strong></td>
+              <td><span class="method-badge get">GET</span></td>
+              <td><code>/api/admin/stats</code></td>
+              <td>Admin</td>
+              <td>Aggregate total revenue, orders, and active users</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- SECTION 5 -->
+    <section id="database-design">
+      <h2><i class="fa-solid fa-database"></i> 5. Mongoose Data Models</h2>
+      <p>
+        The data layer enforces relational integrity using Mongoose references. Below are key schemas that drive the system:
+      </p>
+
+      <div class="schema-card">
+        <div class="schema-header">
+          <span class="schema-title">Order.js</span>
+          <span class="schema-badge">Document Schema</span>
+        </div>
+        <pre>
+const OrderSchema = new mongoose.Schema({
+  customerId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
+  restaurantId: { type: mongoose.Schema.Types.ObjectId, ref: 'Restaurant', required: true },
+  riderId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', default: null },
+  items: [{
+    menuItemId: { type: mongoose.Schema.Types.ObjectId, ref: 'MenuItem' },
+    name: { type: String, required: true },
+    price: { type: Number, required: true },
+    quantity: { type: Number, required: true }
+  }],
+  totalAmount: { type: Number, required: true },
+  deliveryFee: { type: Number, default: 150 },
+  status: { 
+    type: String, 
+    enum: ['pending', 'accepted', 'preparing', 'ready', 'out-for-delivery', 'delivered', 'cancelled'], 
+    default: 'pending' 
+  },
+  deliveryAddress: { type: String, required: true },
+  phone: { type: String, required: true },
+  review: {
+    rating: { type: Number, min: 1, max: 5 },
+    comment: { type: String },
+    createdAt: { type: Date }
+  },
+  createdAt: { type: Date, default: Date.now }
+});
+        </pre>
+      </div>
+
+      <div class="schema-card">
+        <div class="schema-header">
+          <span class="schema-title">RiderProfile.js</span>
+          <span class="schema-badge">Document Schema</span>
+        </div>
+        <pre>
+const RiderProfileSchema = new mongoose.Schema({
+  userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true, unique: true },
+  isOnline: { type: Boolean, default: false },
+  earnings: { type: Number, default: 0 },
+  orderCount: { type: Number, default: 0 },
+  vehicleDetails: { type: String },
+  updatedAt: { type: Date, default: Date.now }
+});
+        </pre>
+      </div>
+    </section>
+
+    <!-- SECTION 6 -->
+    <section id="order-lifecycle">
+      <h2><i class="fa-solid fa-rotate"></i> 6. Order Operational Flow</h2>
+      <p>
+        The system relies on a secure transactional loop from order placement to customer feedback:
+      </p>
+      <ol>
+        <li><strong>Order Initiation:</strong> Customer completes checkout. The order is recorded as <code>pending</code> and added to the restaurant's active list.</li>
+        <li><strong>Order Acceptance:</strong> Restaurant receives an alert, accepts the order (changing status to <code>accepted</code>), and advances it to <code>preparing</code> and then <code>ready</code>.</li>
+        <li><strong>Rider Allocation:</strong> Restaurant lists active online riders, chooses an available rider, and executes a manual dispatch.</li>
+        <li><strong>Delivery Phase:</strong> Assigned rider picks up the package (<code>out-for-delivery</code>) and marks it as <code>delivered</code> upon arrival.</li>
+        <li><strong>Wallet & Review Updates:</strong> Delivering the order automatically adds Rs. 150 to the rider's earnings wallet, increments their delivery count, and unlocks the customer feedback star modal to dynamically recalculate the restaurant's average rating in the database.</li>
+      </ol>
+    </section>
+
+    <!-- SECTION 7 -->
+    <section id="security-implementation">
+      <h2><i class="fa-solid fa-shield-halved"></i> 7. Security Architecture & Vulnerability Analysis</h2>
+      
+      <h3>7.1. Active Security Controls</h3>
+      <p>
+        FoodFlow applies industry-standard access control and sanitization layers:
+      </p>
+      
+      <div class="security-box defense">
+        <i class="fa-solid fa-lock"></i>
+        <div class="security-content">
+          <h4>One-Way Credential Hashing</h4>
+          <p style="margin-bottom: 0;">
+            Passwords are salted and one-way encrypted using <code>bcryptjs</code> (10 rounds) before database storage. Plaintext credentials are never saved, shielding the application from pre-computed hash cracking and rainbow table matches.
+          </p>
+        </div>
+      </div>
+
+      <div class="security-box defense">
+        <i class="fa-solid fa-id-card-clip"></i>
+        <div class="security-content">
+          <h4>Role-Based Access Control (RBAC)</h4>
+          <p style="margin-bottom: 0;">
+            All private API routes use <code>authMiddleware</code> to decrypt authorization headers. Endpoint calls check the authenticated user's role to block vertical privilege escalations.
+          </p>
+        </div>
+      </div>
+
+      <div class="security-box defense">
+        <i class="fa-solid fa-eye-slash"></i>
+        <div class="security-content">
+          <h4>Query Projection Constraints</h4>
+          <p style="margin-bottom: 0;">
+            Database operations exclude password hashes (e.g. <code>User.find({}, '-password')</code>) to prevent accidental credential leakage in JSON responses.
+          </p>
+        </div>
+      </div>
+
+      <h3>7.2. Threat Modeling & Vulnerability Mitigation Plan</h3>
+      <p>
+        We analyzed the current system structure against common vulnerabilities and defined clear mitigation plans:
+      </p>
+
+      <div class="security-box weakness">
+        <i class="fa-solid fa-triangle-exclamation"></i>
+        <div class="security-content">
+          <h4>1. Client-Side JWT Storage (XSS Risk)</h4>
+          <p>
+            <strong>Vulnerability:</strong> Access tokens are currently saved in browser <code>localStorage</code>, making them susceptible to theft via Cross-Site Scripting (XSS) attacks.
+          </p>
+          <p style="margin-bottom: 0; color: var(--text-main); font-weight: 500;">
+            <strong>Mitigation Plan:</strong> Migrate token storage from <code>localStorage</code> to **HttpOnly, Secure Cookies**, which prevents access via JavaScript and neutralizes script-based session theft.
+          </p>
+        </div>
+      </div>
+
+      <div class="security-box weakness">
+        <i class="fa-solid fa-triangle-exclamation"></i>
+        <div class="security-content">
+          <h4>2. Lack of Authentication Rate Limiting</h4>
+          <p>
+            <strong>Vulnerability:</strong> The login route permits unlimited connection attempts, exposing user accounts to automated dictionary and brute-force cracking tools.
+          </p>
+          <p style="margin-bottom: 0; color: var(--text-main); font-weight: 500;">
+            <strong>Mitigation Plan:</strong> Integrate an active rate limiter like <code>express-rate-limit</code> to restrict logins to a maximum of 5 attempts within a 15-minute window per IP.
+          </p>
+        </div>
+      </div>
+
+      <div class="security-box weakness">
+        <i class="fa-solid fa-triangle-exclamation"></i>
+        <div class="security-content">
+          <h4>3. Absence of Strict Input Schema Validation</h4>
+          <p>
+            <strong>Vulnerability:</strong> Loose schema definitions allow potential attackers to pass NoSQL operator objects (such as <code>$ne</code>) to query fields.
+          </p>
+          <p style="margin-bottom: 0; color: var(--text-main); font-weight: 500;">
+            <strong>Mitigation Plan:</strong> Enforce strict request body structures using validators like <code>Joi</code> or <code>express-validator</code> before executing queries.
+          </p>
+        </div>
+      </div>
+    </section>
+
+    <!-- SECTION 8 -->
+    <section id="future-enhancements">
+      <h2><i class="fa-solid fa-rocket"></i> 8. Recommended Enhancements</h2>
+      <ul>
+        <li><strong>Bidirectional WebSockets:</strong> Replace dynamic polling with a persistent event network built on <code>Socket.io</code> to reduce server overhead.</li>
+        <li><strong>Secure Payment Gateway:</strong> Add credit/debit card support using Stripe Elements with server-side webhook validation.</li>
+        <li><strong>Interactive Map Tracking:</strong> Integrate a map interface showing distances between restaurant locations and customer delivery addresses.</li>
+      </ul>
+    </section>
+
+    <footer style="margin-top: 5rem; border-top: 1px solid var(--border-color); padding-top: 2rem; color: var(--text-muted); font-size: 0.9rem; text-align: center;">
+      FoodFlow System Design Document &copy; 2026. All rights reserved.
+    </footer>
+  </main>
+
+  <script>
+    // Simple Active Navigation Highlighting on Scroll
+    const sections = document.querySelectorAll('section');
+    const navItems = document.querySelectorAll('.nav-item');
+
+    window.addEventListener('scroll', () => {
+      let current = '';
+      sections.forEach(section => {
+        const sectionTop = section.offsetTop;
+        const sectionHeight = section.clientHeight;
+        if (pageYOffset >= (sectionTop - 200)) {
+          current = section.getAttribute('id');
+        }
+      });
+
+      navItems.forEach(item => {
+        item.classList.remove('active');
+        const link = item.querySelector('a').getAttribute('href').substring(1);
+        if (link === current) {
+          item.classList.add('active');
+        }
+      });
+    });
+  </script>
+</body>
+</html>
